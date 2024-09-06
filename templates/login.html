@@ -1,0 +1,149 @@
+{% extends "index.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Login</h2>
+    <form id="loginForm" class="login-form">
+        <label for="username" class="form-label">Username:</label>
+        <input type="text" id="username" name="username" required class="form-input">
+        
+        <label for="password" class="form-label">Password:</label>
+        <input type="password" id="password" name="password" required class="form-input">
+        
+        <button type="submit" class="submit-btn">Login</button>
+    </form>
+    <br>
+    <a href="/reset-password" class="reset-link">Forgot your password?</a>
+    
+    <p class="register-link">
+        Don't have an account?
+        <a href="/register" class="register-link-text">Register</a>
+    </p>    
+    <p id="message" class="form-message"></p>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const csrfToken = document.querySelector('meta[name="csrf_token"]').getAttribute('content');
+
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ username: username, password: password })
+        });
+
+        const result = await response.json();
+
+        if (response.status === 200) {
+            // Redirect to the profile page
+            window.location.href = '/profile';
+        } else {
+            document.getElementById('message').textContent = result.message;
+            document.getElementById('message').classList.add('error-message');
+        }
+    });
+</script>
+
+<style>
+    .container {
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #fff;
+        max-width: 400px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: left;
+        border-radius: 8px;
+    }
+
+    h2 {
+        font-size: 24px;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+    }
+
+    .login-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .form-label {
+        font-size: 16px;
+        margin-bottom: 5px;
+        color: #555;
+        width: 100%;
+    }
+
+    .form-input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 300px;
+        margin-bottom: 20px;
+    }
+
+    .submit-btn {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .submit-btn:hover {
+        background-color: #45a049;
+    }
+
+    .form-message {
+        font-size: 14px;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    .error-message {
+        color: red;
+    }
+
+    .reset-link {
+        display: block;
+        margin-top: 20px;
+        text-align: center;
+        color: #4CAF50;
+        font-size: 16px;
+        text-decoration: none;
+    }
+
+    .reset-link:hover {
+        text-decoration: underline;
+    }
+    .register-link {
+    text-align: center; /* Center the entire paragraph */
+    margin-top: 20px; /* Add some space above */
+}
+
+.register-link-text {
+    text-decoration: none; /* Remove underline from the link */
+    color: #4CAF50; /* Optional: color for the link */
+}
+
+.register-link-text:hover {
+    text-decoration: underline; /* Add underline on hover */
+}
+
+</style>
+{% endblock %}

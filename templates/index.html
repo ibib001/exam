@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Welcome to the Site{% endblock %}</title>
+    <meta name="csrf_token" content="{{ csrf_token() }}">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            text-align: center;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+        }
+        header nav {
+            display: inline-block;
+            margin-top: 10px;
+        }
+        header nav a {
+            color: #fff;
+            text-decoration: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #555;
+            border-radius: 5px;
+        }
+        header nav a:hover {
+            background-color: #777;
+        }
+        .container {
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            max-width: 800px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .file-info {
+            flex: 2;
+            text-align: left;
+            margin-right: 20px;
+        }
+
+        .file-preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-preview {
+            width: 120px;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .buttons {
+            margin-top: 10px;
+        }
+
+        .download-btn, .delete-btn {
+            display: block;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 5px;
+        }
+
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        form {
+            display: inline;
+        }
+
+        .file-details-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .file-details-list li {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+  
+</head>
+<body>
+
+    <header>
+        <nav>
+            {% if username %}
+                <a href="/">Home</a>
+                <a href="/profile">Profile</a>
+                <a href="/upload">Upload File</a>
+                <a href="/logout">Logout</a>
+                <div id="messageContainer" style="display: none; position: fixed; top: 20px; right: 20px; background-color: #4CAF50; color: white; padding: 10px; border-radius: 5px;"></div>
+
+            {% else %}
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            {% endif %}
+        </nav>
+    </header>
+    
+    <div class="container">
+        {% block content %}
+        {% if username %}
+            <h2>Uploaded Files</h2>
+        {% else %}
+            <h2>Please login to see your files</h2>
+        {% endif %}
+        
+        {% if books %}
+            {% for i in books %}
+            <div class="file-item">
+                <div class="file-info">
+                    <ul class="file-details-list">
+                        <li><strong>Filename:</strong> {{ i.filename }}</li>
+                        <li><strong>Format:</strong> {{ i.file_format }}</li>
+                        <li><strong>Size:</strong> {{ i.size }} KB</li>
+                        <li><strong>Uploaded on:</strong> {{ i.upload_time }}</li>
+                    </ul>
+                </div>
+                <div class="file-preview-container">
+                    <img src="{{ url_for('download_file', filename=i.filename) }}" alt="{{ i.filename }}" class="file-preview" />
+                    <div class="buttons">
+                        <a href="{{ url_for('download_file', filename=i.filename) }}" class="download-btn">Download</a>
+                        <form action="{{ url_for('delete_file', filename=i.filename) }}" method="POST" class="delete-form">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="delete-btn">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endblock %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const forms = document.querySelectorAll('.delete-form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const formData = new FormData(this);
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        // Check if the response is okay
+                        if (response.ok) {
+                            return response.json(); // Parse JSON if successful
+                        } else {
+                            throw new Error('Network response was not ok.');
+                        }
+                    })
+                    .then(data => {
+                        
+                        setTimeout(() => {
+                            window.location.reload();  // Refresh the current page
+                        }, 100); // Adjust the delay as needed
+                        showMessage(data.message);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showMessage('An error occurred while deleting the file.', true);
+                    });
+                });
+            });
+    
+            function showMessage(message, isError = false) {
+                const messageContainer = document.getElementById('messageContainer');
+                messageContainer.textContent = message;
+                messageContainer.style.backgroundColor = isError ? '#f44336' : '#4CAF50'; // Red for errors, green for success
+                messageContainer.style.display = 'block';
+                
+                // Hide the message after 2 seconds
+                setTimeout(() => {
+                    messageContainer.style.display = 'none';
+                }, 5000); // Adjust the delay as needed
+            }
+        });
+    </script>
+    
+</body>
+</html>

@@ -1,0 +1,213 @@
+{% extends "index.html" %}
+
+<title>{% block title %}File Upload{% endblock %}</title>
+
+{% block content %}
+<div class="container">
+    <h2>Upload a File</h2>
+    <form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload" class="upload-form">
+        <label for="file" class="file-label">Choose file to upload:</label>
+        <input type="file" id="file" name="file" required class="file-input" onchange="previewFile()">
+        <div id="filePreview" class="file-preview-container">
+            <img id="previewImage" class="file-preview" style="display: none;" />
+            <p id="previewText" class="file-preview-text" style="display: none;"></p>
+        </div>
+        <button type="submit" class="upload-btn">Upload</button>
+        <div id="progressContainer" class="progress-container" style="display: none;">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+    </form>
+    <p id="message" class="upload-message"></p>
+</div>
+
+<script>
+    function previewFile() {
+        const fileInput = document.getElementById('file');
+        const previewImage = document.getElementById('previewImage');
+        const previewText = document.getElementById('previewText');
+        const file = fileInput.files[0];
+
+        if (file) {
+            const fileReader = new FileReader();
+
+            if (file.type.startsWith('image/')) {
+                fileReader.onload = function(event) {
+                    previewImage.src = event.target.result;
+                    previewImage.style.display = 'block';
+                    previewText.style.display = 'none';
+                };
+                fileReader.readAsDataURL(file);
+            } else {
+                previewImage.style.display = 'none';
+                previewText.textContent = `File selected: ${file.name}`;
+                previewText.style.display = 'block';
+            }
+        } else {
+            previewImage.style.display = 'none';
+            previewText.style.display = 'none';
+        }
+    }
+    function handleFileUpload(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('uploadForm');
+    const csrfToken = document.querySelector('meta[name="csrf_token"]').getAttribute('content');
+    const formData = new FormData(form);
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const uploadButton = document.querySelector('.upload-btn'); // Select the upload button
+    const fileInput = document.getElementById('file'); // Select the file input
+
+    // Disable the upload button
+    uploadButton.disabled = true;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload', true);
+
+    xhr.setRequestHeader('Authorization', `Bearer ${csrfToken}`);
+    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+
+    xhr.upload.onprogress = function(event) {
+        if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            progressBar.style.width = percentComplete + '%';
+        }
+    };
+
+    xhr.onload = function() {
+        if (xhr.status === 201) {
+            const result = JSON.parse(xhr.responseText);
+            document.getElementById('message').textContent = result.message;
+            document.getElementById('message').classList.add('success-message');
+            fileInput.value = ''; // Clear the file input
+
+            // Redirect to the home page after a short delay
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 10); // Adjust the delay as needed
+        } else {
+            const result = JSON.parse(xhr.responseText);
+            document.getElementById('message').textContent = result.message || 'An error occurred.';
+            document.getElementById('message').classList.add('error-message');
+        }
+        progressContainer.style.display = 'none'; // Hide progress bar on success or error
+        uploadButton.disabled = false; // Re-enable the upload button
+    };
+
+    xhr.onerror = function() {
+        document.getElementById('message').textContent = 'Network error: ' + xhr.statusText;
+        document.getElementById('message').classList.add('error-message');
+        progressContainer.style.display = 'none'; // Hide progress bar on error
+        uploadButton.disabled = false; // Re-enable the upload button
+    };
+
+    xhr.send(formData);
+    progressContainer.style.display = 'block'; // Show progress bar while uploading
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('uploadForm').addEventListener('submit', handleFileUpload);
+    });
+</script>
+
+<style>
+    .container {
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #fff;
+        max-width: 600px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: left;
+    }
+
+    h2 {
+        font-size: 24px;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+    }
+
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .file-label {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #555;
+    }
+
+    .file-input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .upload-btn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .upload-btn:hover {
+        background-color: #45a049;
+    }
+
+    .file-preview-container {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .file-preview {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+
+    .file-preview-text {
+        font-size: 16px;
+        color: #555;
+    }
+
+    .progress-container {
+        width: 100%;
+        max-width: 500px;
+        margin-top: 20px;
+        background-color: #f3f3f3;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 20px;
+        background-color: #4CAF50;
+        width: 0;
+        transition: width 0.4s ease;
+    }
+
+    .upload-message {
+        margin-top: 20px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .success-message {
+        color: green;
+    }
+
+    .error-message {
+        color: red;
+    }
+</style>
+{% endblock %}
